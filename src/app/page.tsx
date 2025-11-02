@@ -31,7 +31,7 @@ export default function Home() {
       height: { ideal: 720 },
       facingMode: "user"
     },
-    audio: true,
+    audio: false,
   };
 
   // Cleanup da câmera
@@ -50,8 +50,11 @@ export default function Home() {
     setError(null);
     
     try {
+      console.log("Tentando acessar câmera traseira...");
       const stream = await navigator.mediaDevices.getUserMedia(HIGH_RES_CONSTRAINTS);
       cameraStreamRef.current = stream;
+
+      console.log("Câmera traseira obtida:", stream.getVideoTracks()[0].getSettings());
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -63,6 +66,8 @@ export default function Home() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(FALLBACK_RES_CONSTRAINTS);
         cameraStreamRef.current = stream;
+
+        console.log("Câmera frontal obtida:", stream.getVideoTracks()[0].getSettings());
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -84,6 +89,17 @@ export default function Home() {
       return;
     }
 
+    // Verificar se o stream está ativo
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack || videoTrack.readyState !== 'live') {
+      setError("A câmera não está ativa. Tente fechar e abrir novamente.");
+      console.error("Video track não está ativo:", videoTrack);
+      return;
+    }
+
+    console.log("Stream ativo, iniciando gravação...");
+    console.log("Video track:", videoTrack.getSettings());
+
     let mimeType = "video/webm;codecs=vp9";
     if (!MediaRecorder.isTypeSupported(mimeType)) {
       mimeType = "video/webm;codecs=vp8";
@@ -91,6 +107,8 @@ export default function Home() {
         mimeType = "video/webm";
       }
     }
+
+    console.log("Usando MIME type:", mimeType);
 
     try {
       const mediaRecorder = new MediaRecorder(stream, { 
@@ -103,15 +121,24 @@ export default function Home() {
       const chunks: Blob[] = [];
       
       mediaRecorder.ondataavailable = (e: BlobEvent) => {
+        console.log("Chunk recebido:", e.data.size, "bytes");
         if (e.data.size > 0) chunks.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
+        console.log("Gravação parada. Total de chunks:", chunks.length);
         setRecordedChunks(chunks);
         setRecordingState("stopped");
       };
 
-      mediaRecorder.start(2000);
+      mediaRecorder.onerror = (e) => {
+        console.error("Erro no MediaRecorder:", e);
+        setError("Erro durante a gravação");
+        setRecordingState("idle");
+      };
+
+      mediaRecorder.start(1000); // Mudei para 1 segundo
+      console.log("MediaRecorder iniciado com sucesso");
       setRecordingState("recording");
       setError(null);
     } catch (err) {
