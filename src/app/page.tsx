@@ -45,8 +45,7 @@ export default function Home() {
         audio: false,
       };
 
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = (await navigator.mediaDevices.getUserMedia(constraints)) as MediaStream;
       cameraStreamRef.current = stream;
 
       if (videoRef.current) {
@@ -57,7 +56,9 @@ export default function Home() {
     } catch (err) {
       console.warn("Falha câmera traseira de alta resolução, tentando frontal HD:", err);
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(FALLBACK_RES_CONSTRAINTS);
+        const stream = (await navigator.mediaDevices.getUserMedia(
+          FALLBACK_RES_CONSTRAINTS
+        )) as MediaStream;
         cameraStreamRef.current = stream;
 
         if (videoRef.current) {
