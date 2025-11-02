@@ -1,34 +1,33 @@
 "use client";
 
-
 import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
-  const videoRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const cameraStreamRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState([]);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
   // Restrições de alta resolução (Full HD)
-  const HIGH_RES_CONSTRAINTS = {
+  const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
     video: {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
       frameRate: { ideal: 60, max: 60 },
-      facingMode: "environment"
+      facingMode: "environment",
     },
     audio: false,
   };
 
   // Restrições de fallback (HD)
-  const FALLBACK_RES_CONSTRAINTS = {
+  const FALLBACK_RES_CONSTRAINTS: MediaStreamConstraints = {
     video: {
       width: { ideal: 1280 },
       height: { ideal: 720 },
-      facingMode: "user"
+      facingMode: "user",
     },
     audio: true,
   };
@@ -36,13 +35,16 @@ export default function Home() {
   // Inicia câmera
   const startCamera = async () => {
     try {
-      const constraints = {
-        ...HIGH_RES_CONSTRAINTS,
+      const constraints: MediaStreamConstraints = {
         video: {
-          ...HIGH_RES_CONSTRAINTS.video,
-          facingMode: "environment"
-        }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 60, max: 60 },
+          facingMode: "environment",
+        },
+        audio: false,
       };
+
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       cameraStreamRef.current = stream;
@@ -50,7 +52,7 @@ export default function Home() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () =>
-          videoRef.current.play().catch(console.error);
+          videoRef.current!.play().catch(console.error);
       }
     } catch (err) {
       console.warn("Falha câmera traseira de alta resolução, tentando frontal HD:", err);
@@ -61,7 +63,7 @@ export default function Home() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () =>
-            videoRef.current.play().catch(console.error);
+            videoRef.current!.play().catch(console.error);
         }
       } catch (fallbackErr) {
         console.error("Não foi possível acessar a câmera:", fallbackErr);
@@ -92,7 +94,7 @@ export default function Home() {
       const mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
       mediaRecorderRef.current = mediaRecorder;
 
-      const chunks = [];
+      const chunks: Blob[] = [];
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
@@ -103,7 +105,7 @@ export default function Home() {
 
       mediaRecorder.start(2000);
       setRecording(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao iniciar gravação:", err);
       alert("Erro ao iniciar gravação: " + err.message);
     }
@@ -190,8 +192,6 @@ export default function Home() {
                     muted
                     className="w-full max-h-[75vh] bg-black rounded-md"
                   />
-
-                  {/* Marca pontilhada */}
                   <div
                     className="absolute top-1/2 left-1/2 w-[386px] h-[583px] -translate-x-1/2 -translate-y-1/2 border-2 border-dashed border-red-500 pointer-events-none"
                   />
