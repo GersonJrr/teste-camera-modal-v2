@@ -5,42 +5,6 @@ import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import { FaCamera } from "react-icons/fa";
 
-interface ConfirmPhotoModalProps {
-  photo: string;
-  onConfirm: () => void;
-  onRetry: () => void;
-}
-
-// Modal de confirmação inline
-const ConfirmPhotoModal: React.FC<ConfirmPhotoModalProps> = ({ photo, onConfirm, onRetry }) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-xl font-semibold mb-4 text-center">Confirmar Foto</h3>
-        <img
-          src={photo}
-          alt="Preview"
-          className="w-full rounded-lg mb-4"
-          style={{ transform: "scaleX(-1)" }}
-        />
-        <div className="flex gap-3">
-          <button
-            onClick={onRetry}
-            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg"
-          >
-            Tentar Novamente
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg"
-          >
-            Confirmar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function Home() {
   const webcamRef = useRef<Webcam>(null);
@@ -448,12 +412,6 @@ export default function Home() {
     };
   }, []);
 
-  const handleConfirmPhoto = useCallback(() => {
-    setShowConfirmModal(false);
-    setPhotoTaken(tempPhoto);
-    // Aqui você pode adicionar lógica adicional com a foto
-    console.log("Foto confirmada:", tempPhoto);
-  }, [tempPhoto]);
 
   const handleStartCamera = useCallback(() => {
     setIsLoadingCamera(true);
@@ -461,17 +419,17 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-      <div className="relative w-full max-w-2xl">
+    <>
+      <div className="relative w-full">
         <div
           ref={ovalRef}
-          className="relative aspect-[3/4] overflow-hidden min-h-[400px] w-full bg-gray-900 rounded-lg shadow-xl"
+          className="relative aspect-[3/4] overflow-hidden min-h-[400px] w-full bg-gray-900"
         >
           {!cameraStarted ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
               <button
                 onClick={handleStartCamera}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg transition-all"
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
               >
                 <span className="text-2xl mr-2">📸</span>
                 Iniciar Câmera
@@ -488,7 +446,7 @@ export default function Home() {
               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                 <button
                   onClick={handleNewPhoto}
-                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg transition-all"
+                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
                 >
                   <span className="text-2xl mr-2">📸</span>
                   Nova Foto
@@ -532,40 +490,30 @@ export default function Home() {
         </div>
 
         {/* Feedback message */}
-        {cameraStarted && !photoTaken && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
-            <div
-              className={`
-                 px-6 py-4 rounded-xl
-                 text-white text-center text-lg font-medium
-                 transition-colors duration-300
-                 shadow-lg
-                 ${getMessageBackground()}
-               `}
-            >
-              {countdown && <span className="text-2xl mr-2">📸</span>}
-              {isFaceAligned && !countdown && <span className="text-2xl mr-2">😊</span>}
-              {!isFaceAligned && !faceIsTooClose && !faceIsTooFar && !countdown && (
-                <span className="text-2xl mr-2">👀</span>
-              )}
-              {getMessage()}
-            </div>
-          </div>
-        )}
-
-        {countdown && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
           <div
-            className={`mt-5 mx-auto max-w-[84px] w-full h-[84px] text-white font-bold flex items-center justify-center gap-2 rounded-full shadow-lg ${getMessageBackground()}`}
+            className={`
+               px-6 py-4 rounded-xl
+               text-white text-center text-lg font-medium
+               transition-colors duration-300
+               ${getMessageBackground()}
+             `}
           >
-            <FaCamera size={30} />
-            <span className="text-[50px]">{countdown}</span>
+            {countdown && <span className="text-2xl mr-2">📸</span>}
+            {isFaceAligned && <span className="text-2xl mr-2">😊</span>}
+            {!isFaceAligned && !faceIsTooClose && !faceIsTooFar && <span className="text-2xl mr-2">👀</span>}
+            {getMessage()}
           </div>
-        )}
+        </div>
       </div>
-
-      {showConfirmModal && tempPhoto && (
-        <ConfirmPhotoModal photo={tempPhoto} onConfirm={handleConfirmPhoto} onRetry={handleRetryPhoto} />
+      {countdown && (
+        <div
+          className={`mt-5 mx-auto max-w-[84px] w-full h-[84px] text-white font-bold flex items-center justify-center gap-2 rounded-full ${getMessageBackground()}`}
+        >
+          <FaCamera size={30} />
+          <span className="text-[50px]">{countdown}</span>
+        </div>
       )}
-    </main>
+    </>
   );
 }
