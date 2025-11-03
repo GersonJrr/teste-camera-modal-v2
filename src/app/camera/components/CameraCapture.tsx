@@ -132,10 +132,10 @@ export default function CameraCapture() {
           onClick={closeCamera}
         >
           <div
-            className="w-[95vw] md:w-[80vw] h-[95vh] md:h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl"
+            className="w-[100%] md:w-[80vw] h-[95vh] md:h-[90vh] rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 h-full flex flex-col items-center justify-center gap-4">
+            <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
               <video
                 ref={videoRef}
                 autoPlay
