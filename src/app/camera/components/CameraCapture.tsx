@@ -13,7 +13,7 @@ export default function CameraCapture() {
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
     video: { width: 1920, height: 1080, facingMode: "environment" },
-    audio: true,
+    audio: false,
   };
 
   const startCamera = async () => {
@@ -139,6 +139,7 @@ export default function CameraCapture() {
             
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
               {/* Dentro do container do vídeo */}
+            {/* Dentro do container do vídeo */}
               <div className="relative w-full max-h-[70vh] flex items-center justify-center">
                 <video
                   ref={videoRef}
@@ -148,12 +149,12 @@ export default function CameraCapture() {
                   className="w-full h-full bg-black rounded-md object-contain"
                 />
 
-                {/* Overlay pontilhado central - EXATAMENTE 1080x1627px */}
+                {/* Overlay pontilhado central - Proporção 386x583 */}
                 <div
                   className="absolute border-2 border-dashed border-white"
                   style={{
-                    width: "1080px",
-                    height: "1627px",
+                    width: "386px",
+                    height: "583px",
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
