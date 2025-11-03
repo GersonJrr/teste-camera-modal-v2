@@ -12,7 +12,7 @@ export default function CameraCapture() {
   const [zoom, setZoom] = useState(1);
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
-    video: { width: 1920, height: 1080, facingMode: "environment" },
+    video: { width: 1080, height: 1920, facingMode: "environment" },
     audio: false,
   };
 
@@ -125,44 +125,48 @@ export default function CameraCapture() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black z-50">
-          {/* Vídeo em tela cheia */}
-          <div className="relative w-full h-full">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={closeCamera}
+        >
+          <div
+            className="w-[100%] md:w-[80vw] h-[95vh] md:h-[90vh] rounded-xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
+              {/* Container do vídeo com overlay */}
+              <div className="relative w-full max-h-[70vh] flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full bg-black rounded-md object-contain"
+                />
+                {/* Overlay com área de corte 1080x1627 */}
+                <div 
+                  className="absolute pointer-events-none"
+                  style={{
+                    width: '100%',
+                    height: '84.74%',
+                    border: '2px dashed rgba(255, 255, 255, 0.8)',
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.3)',
+                  }}
+                />
+              </div>
 
-            {/* Overlay pontilhado central - Proporção 386x583 */}
-            <div
-              className="absolute border-2 border-dashed border-white"
-              style={{
-                width: "100%",
-                height: "583px",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Controles sobrepostos */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
               {/* Controles de Zoom */}
-              <div className="flex gap-2 items-center justify-center mb-4">
+              <div className="flex gap-2 items-center justify-center mt-2">
                 <button
-                  className="bg-gray-700/90 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-xl"
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-xl"
                   onClick={handleZoomOut}
                   disabled={zoom <= 1}
                 >
                   −
                 </button>
-                <span className="text-white font-semibold min-w-[50px] text-center">{zoom.toFixed(1)}x</span>
+                <span className="text-white font-semibold min-w-[40px] text-center">{zoom.toFixed(1)}x</span>
                 <button
-                  className="bg-gray-700/90 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-xl"
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-xl"
                   onClick={handleZoomIn}
                   disabled={zoom >= 5}
                 >
@@ -170,40 +174,30 @@ export default function CameraCapture() {
                 </button>
               </div>
 
-              {/* Botões de controle */}
-              <div className="flex flex-col gap-2">
-                {!recording ? (
-                  <button
-                    className="bg-green-500/90 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg"
-                    onClick={startRecording}
-                  >
-                    ▶️ Iniciar Gravação
-                  </button>
-                ) : (
-                  <button
-                    className="bg-red-500/90 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg"
-                    onClick={stopRecording}
-                  >
-                    ⏹️ Parar Gravação
-                  </button>
-                )}
-
-                {recordedChunks.length > 0 && (
-                  <button
-                    className="bg-blue-500/90 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg"
-                    onClick={saveVideo}
-                  >
-                    💾 Salvar Vídeo
-                  </button>
-                )}
-
+              {!recording ? (
                 <button
-                  className="bg-gray-700/90 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg"
-                  onClick={closeCamera}
+                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg w-full"
+                  onClick={startRecording}
                 >
-                  ✕ Fechar
+                  ▶️ Iniciar Gravação
                 </button>
-              </div>
+              ) : (
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg w-full"
+                  onClick={stopRecording}
+                >
+                  ⏹️ Parar Gravação
+                </button>
+              )}
+
+              {recordedChunks.length > 0 && (
+                <button
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg w-full"
+                  onClick={saveVideo}
+                >
+                  💾 Salvar Vídeo
+                </button>
+              )}
             </div>
           </div>
         </div>
