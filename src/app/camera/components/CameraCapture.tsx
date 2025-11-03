@@ -13,7 +13,7 @@ export default function CameraCapture() {
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
     video: { width: 1920, height: 1080, facingMode: "environment" },
-    audio: false,
+    audio: true,
   };
 
   const startCamera = async () => {
@@ -139,31 +139,27 @@ export default function CameraCapture() {
             
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
               {/* Dentro do container do vídeo */}
-              <div className="relative w-full max-h-[70vh]">
+              <div className="relative w-full max-h-[70vh] flex items-center justify-center">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full bg-black rounded-md object-cover"
+                  className="w-full h-full bg-black rounded-md object-contain"
                 />
 
-                {/* Overlay pontilhado central */}
-                {/* Overlay pontilhado central */}
-                <div
-                  className="absolute border-2 border-dashed border-white"
-                  style={{
-                    // Definindo a altura como um percentual da altura do contêiner
-                    height: "90%", // Ajuste este valor (ex: 90% da altura total do vídeo)
-                    // Remove a largura fixa
-                    
-                    aspectRatio: "1080/1627", // Mantém a proporção exata do quadro
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    pointerEvents: "none",
-                  }}
-                />
+                {/* Overlay pontilhado central - EXATAMENTE 1080x1627px */}
+                <div
+                  className="absolute border-2 border-dashed border-white"
+                  style={{
+                    width: "1080px",
+                    height: "1627px",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "none",
+                  }}
+                />
               </div>
 
 
