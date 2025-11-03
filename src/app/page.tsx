@@ -1,12 +1,9 @@
-'use client';
+"use client";
+
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import { FaCamera } from "react-icons/fa";
-
-interface HomeProps {
-  onPhotoCapture?: (photo: string) => void;
-}
 
 interface ConfirmPhotoModalProps {
   photo: string;
@@ -45,7 +42,7 @@ const ConfirmPhotoModal: React.FC<ConfirmPhotoModalProps> = ({ photo, onConfirm,
   );
 };
 
-function Home({ onPhotoCapture }: HomeProps) {
+export default function Home() {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ovalRef = useRef<HTMLDivElement>(null);
@@ -454,10 +451,9 @@ function Home({ onPhotoCapture }: HomeProps) {
   const handleConfirmPhoto = useCallback(() => {
     setShowConfirmModal(false);
     setPhotoTaken(tempPhoto);
-    if (onPhotoCapture && tempPhoto) {
-      onPhotoCapture(tempPhoto);
-    }
-  }, [tempPhoto, onPhotoCapture]);
+    // Aqui você pode adicionar lógica adicional com a foto
+    console.log("Foto confirmada:", tempPhoto);
+  }, [tempPhoto]);
 
   const handleStartCamera = useCallback(() => {
     setIsLoadingCamera(true);
@@ -465,17 +461,17 @@ function Home({ onPhotoCapture }: HomeProps) {
   }, []);
 
   return (
-    <>
-      <div className="relative w-full">
+    <main className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+      <div className="relative w-full max-w-2xl">
         <div
           ref={ovalRef}
-          className="relative aspect-[3/4] overflow-hidden min-h-[400px] w-full bg-gray-900"
+          className="relative aspect-[3/4] overflow-hidden min-h-[400px] w-full bg-gray-900 rounded-lg shadow-xl"
         >
           {!cameraStarted ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
               <button
                 onClick={handleStartCamera}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg transition-all"
               >
                 <span className="text-2xl mr-2">📸</span>
                 Iniciar Câmera
@@ -492,7 +488,7 @@ function Home({ onPhotoCapture }: HomeProps) {
               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                 <button
                   onClick={handleNewPhoto}
-                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
+                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg transition-all"
                 >
                   <span className="text-2xl mr-2">📸</span>
                   Nova Foto
@@ -536,36 +532,40 @@ function Home({ onPhotoCapture }: HomeProps) {
         </div>
 
         {/* Feedback message */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
-          <div
-            className={`
-               px-6 py-4 rounded-xl
-               text-white text-center text-lg font-medium
-               transition-colors duration-300
-               ${getMessageBackground()}
-             `}
-          >
-            {countdown && <span className="text-2xl mr-2">📸</span>}
-            {isFaceAligned && <span className="text-2xl mr-2">😊</span>}
-            {!isFaceAligned && !faceIsTooClose && !faceIsTooFar && <span className="text-2xl mr-2">👀</span>}
-            {getMessage()}
+        {cameraStarted && !photoTaken && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+            <div
+              className={`
+                 px-6 py-4 rounded-xl
+                 text-white text-center text-lg font-medium
+                 transition-colors duration-300
+                 shadow-lg
+                 ${getMessageBackground()}
+               `}
+            >
+              {countdown && <span className="text-2xl mr-2">📸</span>}
+              {isFaceAligned && !countdown && <span className="text-2xl mr-2">😊</span>}
+              {!isFaceAligned && !faceIsTooClose && !faceIsTooFar && !countdown && (
+                <span className="text-2xl mr-2">👀</span>
+              )}
+              {getMessage()}
+            </div>
           </div>
-        </div>
+        )}
+
+        {countdown && (
+          <div
+            className={`mt-5 mx-auto max-w-[84px] w-full h-[84px] text-white font-bold flex items-center justify-center gap-2 rounded-full shadow-lg ${getMessageBackground()}`}
+          >
+            <FaCamera size={30} />
+            <span className="text-[50px]">{countdown}</span>
+          </div>
+        )}
       </div>
-      {countdown && (
-        <div
-          className={`mt-5 mx-auto max-w-[84px] w-full h-[84px] text-white font-bold flex items-center justify-center gap-2 rounded-full ${getMessageBackground()}`}
-        >
-          <FaCamera size={30} />
-          <span className="text-[50px]">{countdown}</span>
-        </div>
-      )}
 
       {showConfirmModal && tempPhoto && (
         <ConfirmPhotoModal photo={tempPhoto} onConfirm={handleConfirmPhoto} onRetry={handleRetryPhoto} />
       )}
-    </>
+    </main>
   );
 }
-
-export default Home;
