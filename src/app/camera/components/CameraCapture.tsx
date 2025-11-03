@@ -74,14 +74,16 @@ export default function Home() {
     if (!stream) return;
 
     const track = stream.getVideoTracks()[0];
-    const capabilities = track.getCapabilities() as any;
+    const capabilities = track.getCapabilities();
 
-    if (capabilities.zoom) {
-      const maxZoom = capabilities.zoom.max;
-      const minZoom = capabilities.zoom.min;
-      
+    // Type guard: checa se 'zoom' existe
+    if ("zoom" in capabilities) {
+      const zoomCap = capabilities as MediaTrackCapabilities & { zoom: { min: number; max: number } };
+      const maxZoom = zoomCap.zoom.max ?? 1;
+      const minZoom = zoomCap.zoom.min ?? 1;
+
       const clampedZoom = Math.max(minZoom, Math.min(maxZoom, zoomLevel));
-      
+
       track.applyConstraints({
         advanced: [{ zoom: clampedZoom } as any]
       }).catch(console.error);
