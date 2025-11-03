@@ -1,6 +1,14 @@
+"use client"
 import { useState, useRef, useEffect } from "react";
 
-export default function Home() {
+interface CameraCaptureProps {
+  onPhotoCapture?: (photo: string) => void;
+}
+
+
+
+export default function CameraCapture({ onPhotoCapture }: CameraCaptureProps) {
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
