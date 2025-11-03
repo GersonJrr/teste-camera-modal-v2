@@ -145,7 +145,7 @@ export default function CameraCapture() {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full bg-black rounded-md"
+                  className="w-full h-full bg-black rounded-md object-cover"
                 />
 
                 {/* Overlay pontilhado central */}
