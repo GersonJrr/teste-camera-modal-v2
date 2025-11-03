@@ -13,7 +13,7 @@ export default function CameraCapture() {
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
     video: { width: 1920, height: 1080, facingMode: "environment" },
-    audio: true,
+    audio: false,
   };
 
   const startCamera = async () => {
@@ -131,18 +131,37 @@ export default function CameraCapture() {
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
           onClick={closeCamera}
         >
+          
           <div
             className="w-[100%] md:w-[80vw] h-[95vh] md:h-[90vh] rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full max-h-[70vh] bg-black rounded-md"
-              />
+              {/* Dentro do container do vídeo */}
+              <div className="relative w-full max-h-[70vh]">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full bg-black rounded-md"
+                />
+
+                {/* Overlay pontilhado central */}
+                <div
+                  className="absolute border-2 border-dashed border-white"
+                  style={{
+                    width: "386px",
+                    height: "583px",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "none", // para não atrapalhar clique nos botões
+                  }}
+                />
+              </div>
+
 
               {/* Controles de Zoom */}
               <div className="flex gap-2 items-center justify-center mt-2">
@@ -153,7 +172,7 @@ export default function CameraCapture() {
                 >
                   −
                 </button>
-                <span className="text-gray-700 font-semibold min-w-[40px] text-center">{zoom.toFixed(1)}x</span>
+                <span className="text-white font-semibold min-w-[40px] text-center">{zoom.toFixed(1)}x</span>
                 <button
                   className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-xl"
                   onClick={handleZoomIn}
