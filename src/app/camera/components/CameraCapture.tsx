@@ -137,17 +137,40 @@ export default function CameraCapture() {
             />
 
             {/* Overlay pontilhado central - Proporção 386x583 */}
+           {/* Overlay pontilhado central - Proporção 386x584 */}
             <div
               className="absolute border-2 border-dashed border-white"
               style={{
                 width: "386px",
-                height: "583px",
+                height: "584px",
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 pointerEvents: "none",
               }}
             />
+
+            {/* Áreas que serão cortadas - escurecidas */}
+            <div
+              className="absolute top-0 left-0 right-0 bg-black/60"
+              style={{
+                height: "calc((100vh - 584px) / 2)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              className="absolute bottom-0 left-0 right-0 bg-black/60"
+              style={{
+                height: "calc((100vh - 584px) / 2)",
+                pointerEvents: "none",
+              }}
+            >
+              <div className="absolute top-2 left-0 right-0 text-center">
+                <span className="text-white/80 text-sm font-semibold bg-black/40 px-3 py-1 rounded">
+                  Área que será cortada
+                </span>
+              </div>
+            </div>
 
             {/* Controles sobrepostos */}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
