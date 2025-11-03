@@ -24,7 +24,6 @@ export default function CameraCapture() {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(console.error);
       }
-      applyZoom(zoom); // aplica zoom inicial
     } catch (err) {
       console.error("Não foi possível acessar a câmera:", err);
       alert("Não foi possível acessar a câmera. Verifique as permissões.");
