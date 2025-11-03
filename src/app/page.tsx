@@ -1,232 +1,571 @@
-"use client";
+'use client';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import Webcam from "react-webcam";
+import * as faceapi from "face-api.js";
+import { FaCamera } from "react-icons/fa";
 
-import { useState, useRef, useEffect } from "react";
+interface HomeProps {
+  onPhotoCapture?: (photo: string) => void;
+}
 
-export default function Home() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const cameraStreamRef = useRef<MediaStream | null>(null);
+interface ConfirmPhotoModalProps {
+  photo: string;
+  onConfirm: () => void;
+  onRetry: () => void;
+}
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+// Modal de confirmação inline
+const ConfirmPhotoModal: React.FC<ConfirmPhotoModalProps> = ({ photo, onConfirm, onRetry }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 className="text-xl font-semibold mb-4 text-center">Confirmar Foto</h3>
+        <img
+          src={photo}
+          alt="Preview"
+          className="w-full rounded-lg mb-4"
+          style={{ transform: "scaleX(-1)" }}
+        />
+        <div className="flex gap-3">
+          <button
+            onClick={onRetry}
+            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg"
+          >
+            Tentar Novamente
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg"
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  // Restrições de alta resolução (Full HD)
-  const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
-    video: {
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 60, max: 60 },
-      facingMode: "environment",
-    },
-    audio: false,
-  };
+function Home({ onPhotoCapture }: HomeProps) {
+  const webcamRef = useRef<Webcam>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ovalRef = useRef<HTMLDivElement>(null);
+  const processingRef = useRef<boolean>(false);
+  const countdownTimer = useRef<NodeJS.Timeout | null>(null);
+  const detectionFrame = useRef<number | null>(null);
+  const lastPositions = useRef<{ x: number; y: number }[]>([]);
 
-  // Restrições de fallback (HD)
-  const FALLBACK_RES_CONSTRAINTS: MediaStreamConstraints = {
-    video: {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
+  const [isReady, setIsReady] = useState(false);
+  const [isFaceAligned, setIsFaceAligned] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [photoTaken, setPhotoTaken] = useState<string | null>(null);
+  const [cameraStarted, setCameraStarted] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [tempPhoto, setTempPhoto] = useState<string | null>(null);
+  const [detectionActive, setDetectionActive] = useState(true);
+  const [faceIsTooClose, setFaceIsTooClose] = useState(false);
+  const [faceIsTooFar, setFaceIsTooFar] = useState(false);
+  const [isFacingForward, setIsFacingForward] = useState(false);
+  const [isLoadingCamera, setIsLoadingCamera] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const MAX_POSITIONS = 15;
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent));
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const getMessage = useCallback(() => {
+    if (countdown) return `Capturando em ${countdown}...`;
+    if (isFaceAligned && isFacingForward) return "MANTENHA ESSA POSIÇÃO... SORRIA 😊";
+    if (!isFacingForward) return "OLHE DIRETAMENTE PARA A CÂMERA";
+    if (faceIsTooClose) return "AFASTE UM POUCO O ROSTO";
+    if (faceIsTooFar) return "APROXIME UM POUCO MAIS O ROSTO";
+    return "Posicione seu rosto no centro da câmera";
+  }, [countdown, isFaceAligned, isFacingForward, faceIsTooClose, faceIsTooFar]);
+
+  const getMessageBackground = useCallback(() => {
+    if (countdown) return "bg-blue-500/90";
+    if (isFaceAligned && isFacingForward) return "bg-green-500/90";
+    if (!isFacingForward) return "bg-yellow-500/90";
+    if (faceIsTooClose) return "bg-red-500/90";
+    if (faceIsTooFar) return "bg-black/90";
+    return "bg-red-500/90";
+  }, [countdown, isFaceAligned, isFacingForward, faceIsTooClose, faceIsTooFar]);
+
+  const videoConstraints = useMemo(
+    () => ({
+      width: { ideal: isMobile ? 1920 : 4096 },
+      height: { ideal: isMobile ? 1440 : 3072 },
       facingMode: "user",
-    },
-    audio: true,
-  };
+      frameRate: { ideal: 10, max: 15 },
+      aspectRatio: 4 / 3,
+    }),
+    [isMobile]
+  );
 
-  // Inicia câmera
-  const startCamera = async () => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 60, max: 60 },
-          facingMode: "environment",
-        },
-        audio: false,
-      };
-
-      const stream = (await navigator.mediaDevices.getUserMedia(constraints)) as MediaStream;
-      cameraStreamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () =>
-          videoRef.current!.play().catch(console.error);
-      }
-    } catch (err) {
-      console.warn("Falha câmera traseira de alta resolução, tentando frontal HD:", err);
+  useEffect(() => {
+    const loadModels = async () => {
       try {
-        const stream = (await navigator.mediaDevices.getUserMedia(
-          FALLBACK_RES_CONSTRAINTS
-        )) as MediaStream;
-        cameraStreamRef.current = stream;
+        console.log("🔄 Iniciando carregamento dos modelos...");
+        const MODEL_URL = "/models";
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () =>
-            videoRef.current!.play().catch(console.error);
+        const modelsLoaded =
+          faceapi.nets.tinyFaceDetector.isLoaded &&
+          faceapi.nets.faceLandmark68Net.isLoaded &&
+          faceapi.nets.faceExpressionNet.isLoaded;
+
+        if (modelsLoaded) {
+          console.log("✅ Modelos já carregados");
+          setIsReady(true);
+          return;
         }
-      } catch (fallbackErr) {
-        console.error("Não foi possível acessar a câmera:", fallbackErr);
-        alert("Não foi possível acessar a câmera. Verifique as permissões.");
-      }
-    }
-  };
 
-  // Iniciar gravação
-  const startRecording = () => {
-    const stream = cameraStreamRef.current;
-    if (!stream) {
-      alert("Câmera não está pronta. Aguarde alguns segundos.");
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        console.log("✅ TinyFaceDetector carregado");
+
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        console.log("✅ FaceLandmark68Net carregado");
+
+        await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+        console.log("✅ FaceExpressionNet carregado");
+
+        setIsReady(true);
+        console.log("✅ Todos os modelos carregados com sucesso");
+      } catch (error) {
+        console.error("❌ Erro ao carregar modelos:", error);
+      }
+    };
+    loadModels();
+  }, []);
+
+  const resetCountdown = useCallback(() => {
+    if (countdownTimer.current) {
+      clearInterval(countdownTimer.current);
+      countdownTimer.current = null;
+    }
+    setCountdown(null);
+  }, []);
+
+  const handleCapture = useCallback(() => {
+    if (isCapturing || showConfirmModal || tempPhoto) return;
+
+    if (!isFaceAligned || !isFacingForward || faceIsTooClose || faceIsTooFar) {
+      console.log("Cancelando captura - rosto não está na posição ideal ou não olhando para frente");
+      resetCountdown();
       return;
     }
-
-    let mimeType = "video/webm;codecs=vp9";
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = "video/webm;codecs=vp8";
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = "video/webm";
-      }
-    }
-
-    const videoBitsPerSecond = 8000000; // 8 Mbps
 
     try {
-      const mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
-      mediaRecorderRef.current = mediaRecorder;
+      const video = webcamRef.current?.video;
+      if (!video || !video.videoWidth || !video.videoHeight || video.readyState !== 4) return;
 
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
+      setIsCapturing(true);
+      processingRef.current = true;
+      setIsFaceAligned(false);
+      resetCountdown();
 
-      mediaRecorder.onstop = () => {
-        setRecordedChunks(chunks);
-      };
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-      mediaRecorder.start(2000);
-      setRecording(true);
-    } catch (err: any) {
-      console.error("Erro ao iniciar gravação:", err);
-      alert("Erro ao iniciar gravação: " + err.message);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const photoData = canvas.toDataURL("image/png", 1.0);
+      setTempPhoto(photoData);
+      setPhotoTaken(photoData);
+      setShowConfirmModal(true);
+    } catch (error) {
+      console.error("Erro ao capturar foto:", error);
     }
-  };
+  }, [
+    isCapturing,
+    showConfirmModal,
+    tempPhoto,
+    resetCountdown,
+    isFaceAligned,
+    isFacingForward,
+    faceIsTooClose,
+    faceIsTooFar,
+  ]);
 
-  // Parar gravação
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-    }
-  };
+  const startCountdown = useCallback(() => {
+    if (countdown || countdownTimer.current || isCapturing || showConfirmModal) return;
 
-  // Salvar vídeo
-  const saveVideo = () => {
-    if (recordedChunks.length === 0) {
-      alert("Nenhum vídeo gravado!");
+    if (!isFaceAligned || !isFacingForward || faceIsTooClose || faceIsTooFar) {
+      console.log("Rosto não está na posição ideal ou não olhando para frente");
       return;
     }
 
-    const blob = new Blob(recordedChunks, { type: "video/webm" });
-    const url = URL.createObjectURL(blob);
+    let count = 3;
+    setCountdown(count);
 
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    a.download = `video_${Date.now()}.webm`;
-    document.body.appendChild(a);
-    a.click();
+    countdownTimer.current = setInterval(() => {
+      count--;
+      if (count <= 0) {
+        if (countdownTimer.current) clearInterval(countdownTimer.current);
+        countdownTimer.current = null;
+        setCountdown(null);
+        handleCapture();
+      } else {
+        setCountdown(count);
+      }
+    }, 1000);
+  }, [
+    countdown,
+    handleCapture,
+    isCapturing,
+    showConfirmModal,
+    isFaceAligned,
+    isFacingForward,
+    faceIsTooClose,
+    faceIsTooFar,
+  ]);
 
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
+  const checkFaceAlignment = useCallback((detection: faceapi.FaceDetection, video: HTMLVideoElement) => {
+    try {
+      const box = detection.box;
+      const ovalElement = ovalRef.current;
 
-    alert("Vídeo salvo! Verifique a pasta de Downloads.");
-    setRecordedChunks([]);
-  };
+      if (!ovalElement) return false;
 
-  // Fechar modal e liberar câmera
-  const handleClose = () => {
-    if (recording) stopRecording();
-    setIsOpen(false);
-    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
-    cameraStreamRef.current = null;
-    setRecordedChunks([]);
-  };
+      const ovalRect = ovalElement.getBoundingClientRect();
+      const videoRect = video.getBoundingClientRect();
 
-  // Cleanup ao desmontar
+      const scaleX = video.videoWidth / videoRect.width;
+      const scaleY = video.videoHeight / videoRect.height;
+
+      const ovalBox = {
+        x: (ovalRect.left - videoRect.left) * scaleX,
+        y: (ovalRect.top - videoRect.top) * scaleY,
+        width: ovalRect.width * scaleX,
+        height: ovalRect.height * scaleY,
+      };
+
+      const minFaceSize = ovalBox.height * 0.35;
+      const maxFaceSize = ovalBox.height * 0.6;
+      const faceSize = box.height;
+
+      setFaceIsTooClose(false);
+      setFaceIsTooFar(false);
+
+      if (faceSize < minFaceSize) {
+        console.log("❌ Chegue mais perto");
+        setFaceIsTooFar(true);
+        return false;
+      }
+      if (faceSize > maxFaceSize) {
+        console.log("❌ Afaste um pouco - rosto muito próximo");
+        setFaceIsTooClose(true);
+        return false;
+      }
+
+      const faceCenterX = box.x + box.width / 2;
+      const faceCenterY = box.y + box.height / 2;
+      const ovalCenterX = ovalBox.x + ovalBox.width / 2;
+      const ovalCenterY = ovalBox.y + ovalBox.height / 2;
+
+      const toleranceX = ovalBox.width * 0.3;
+      const toleranceY = ovalBox.height * 0.3;
+
+      const currentPosition = { x: faceCenterX, y: faceCenterY };
+      lastPositions.current.push(currentPosition);
+
+      if (lastPositions.current.length > MAX_POSITIONS) {
+        lastPositions.current.shift();
+      }
+
+      const avgPosition = lastPositions.current.reduce(
+        (acc, pos) => ({
+          x: acc.x + pos.x / lastPositions.current.length,
+          y: acc.y + pos.y / lastPositions.current.length,
+        }),
+        { x: 0, y: 0 }
+      );
+
+      const isAligned =
+        Math.abs(avgPosition.x - ovalCenterX) < toleranceX && Math.abs(avgPosition.y - ovalCenterY) < toleranceY;
+
+      return isAligned;
+    } catch (error) {
+      console.error("Erro no checkFaceAlignment:", error);
+      return false;
+    }
+  }, []);
+
+  const checkFaceOrientation = useCallback((landmarks: faceapi.FaceLandmarks68) => {
+    try {
+      if (!landmarks) return false;
+
+      const nose = landmarks.positions[30];
+      const leftEye = landmarks.positions[36];
+      const rightEye = landmarks.positions[45];
+
+      const midX = (leftEye.x + rightEye.x) / 2;
+      const noseOffset = Math.abs(nose.x - midX);
+      const eyeDistance = Math.abs(rightEye.x - leftEye.x);
+      const threshold = eyeDistance * 0.1;
+
+      return noseOffset <= threshold;
+    } catch (error) {
+      console.error("Erro ao verificar orientação do rosto:", error);
+      return false;
+    }
+  }, []);
+
+  const detectFace = useCallback(async () => {
+    if (!webcamRef.current?.video || !isReady || processingRef.current || isCapturing || showConfirmModal || tempPhoto)
+      return;
+
+    processingRef.current = true;
+
+    try {
+      const video = webcamRef.current.video;
+      if (video.readyState !== 4) {
+        processingRef.current = false;
+        return;
+      }
+
+      const detection = await faceapi
+        .detectSingleFace(
+          video,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 416,
+            scoreThreshold: 0.25,
+          })
+        )
+        .withFaceLandmarks();
+
+      if (detection && detection.detection.score > 0.35) {
+        const isAligned = checkFaceAlignment(detection.detection, video);
+        const isFacing = checkFaceOrientation(detection.landmarks);
+        setIsFacingForward(isFacing);
+
+        if (isAligned !== isFaceAligned) {
+          setIsFaceAligned(isAligned);
+        }
+
+        if (isAligned && isFacing && !countdown && !countdownTimer.current && !isCapturing) {
+          startCountdown();
+        } else if ((!isAligned || !isFacing) && countdown === 3) {
+          resetCountdown();
+        }
+      } else {
+        if (!detection || detection.detection.score < 0.15) {
+          setIsFaceAligned(false);
+          setIsFacingForward(false);
+          if (countdown === 3) resetCountdown();
+        }
+      }
+    } catch (error) {
+      console.error("Erro na detecção:", error);
+      setIsFaceAligned(false);
+      setIsFacingForward(false);
+    } finally {
+      processingRef.current = false;
+    }
+  }, [
+    isReady,
+    countdown,
+    checkFaceAlignment,
+    checkFaceOrientation,
+    startCountdown,
+    resetCountdown,
+    isFaceAligned,
+    isCapturing,
+    showConfirmModal,
+    tempPhoto,
+  ]);
+
+  const handleNewPhoto = useCallback(() => {
+    setPhotoTaken(null);
+    setTempPhoto(null);
+    setShowConfirmModal(false);
+    setIsCapturing(false);
+    processingRef.current = false;
+    lastPositions.current = [];
+  }, []);
+
+  const handleRetryPhoto = useCallback(() => {
+    setShowConfirmModal(false);
+    setTempPhoto(null);
+    setPhotoTaken(null);
+    setIsFaceAligned(false);
+    lastPositions.current = [];
+    resetCountdown();
+    setIsCapturing(false);
+    processingRef.current = false;
+  }, [resetCountdown]);
+
+  useEffect(() => {
+    if (!isReady || !detectionActive || isCapturing || !cameraStarted) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const processFrame = () => {
+      detectFace().finally(() => {
+        if (isReady && detectionActive && !isCapturing && cameraStarted) {
+          timeoutId = setTimeout(() => {
+            requestAnimationFrame(processFrame);
+          }, 200);
+        }
+      });
+    };
+
+    processFrame();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isReady, detectFace, isCapturing, cameraStarted, detectionActive]);
+
+  useEffect(() => {
+    if (showConfirmModal || tempPhoto) {
+      setDetectionActive(false);
+    } else {
+      setDetectionActive(true);
+    }
+  }, [showConfirmModal, tempPhoto]);
+
   useEffect(() => {
     return () => {
-      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+      if (detectionFrame.current) {
+        cancelAnimationFrame(detectionFrame.current);
+      }
+      if (countdownTimer.current) {
+        clearInterval(countdownTimer.current);
+      }
     };
   }, []);
 
+  const handleConfirmPhoto = useCallback(() => {
+    setShowConfirmModal(false);
+    setPhotoTaken(tempPhoto);
+    if (onPhotoCapture && tempPhoto) {
+      onPhotoCapture(tempPhoto);
+    }
+  }, [tempPhoto, onPhotoCapture]);
+
+  const handleStartCamera = useCallback(() => {
+    setIsLoadingCamera(true);
+    setCameraStarted(true);
+  }, []);
+
   return (
-    <div className="text-center">
-      <button
-        className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg text-lg transition-colors"
-        onClick={() => {
-          setIsOpen(true);
-          startCamera();
-        }}
-      >
-        📹 Abrir Câmera
-      </button>
-
-      {isOpen && (
+    <>
+      <div className="relative w-full">
         <div
-          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-          onClick={handleClose}
+          ref={ovalRef}
+          className="relative aspect-[3/4] overflow-hidden min-h-[400px] w-full bg-gray-900"
         >
-          <div
-            className="w-[95vw] md:w-[80vw] h-[95vh] md:h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 flex-grow overflow-y-auto">
-              <div className="flex flex-col gap-4">
-                <div className="relative w-full max-h-[75vh] rounded-md overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full max-h-[75vh] bg-black rounded-md"
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-[386px] h-[583px] -translate-x-1/2 -translate-y-1/2 border-2 border-dashed border-red-500 pointer-events-none"
-                  />
-                </div>
-
-                {!recording ? (
-                  <button
-                    className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg text-lg w-full transition-colors"
-                    onClick={startRecording}
-                  >
-                    ▶️ Iniciar Gravação
-                  </button>
-                ) : (
-                  <button
-                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg text-lg w-full transition-colors"
-                    onClick={stopRecording}
-                  >
-                    ⏹️ Parar Gravação
-                  </button>
-                )}
-
-                {recordedChunks.length > 0 && (
-                  <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg text-lg w-full transition-colors"
-                    onClick={saveVideo}
-                  >
-                    💾 Salvar Vídeo
-                  </button>
-                )}
+          {!cameraStarted ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
+              <button
+                onClick={handleStartCamera}
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
+              >
+                <span className="text-2xl mr-2">📸</span>
+                Iniciar Câmera
+              </button>
+            </div>
+          ) : photoTaken ? (
+            <div className="relative w-full h-full">
+              <img
+                src={photoTaken}
+                alt="Foto capturada"
+                className="w-full h-full object-cover"
+                style={{ transform: "scaleX(-1)" }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <button
+                  onClick={handleNewPhoto}
+                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-8 rounded-full shadow-lg"
+                >
+                  <span className="text-2xl mr-2">📸</span>
+                  Nova Foto
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              {isLoadingCamera && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-900/90">
+                  <div className="w-16 h-16 mb-4 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin"></div>
+                  <p className="text-white text-lg">Iniciando câmera...</p>
+                </div>
+              )}
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                key={cameraStarted ? "camera-on" : "camera-off"}
+                screenshotFormat="image/png"
+                videoConstraints={videoConstraints}
+                forceScreenshotSourceSize={true}
+                className="w-full h-full object-cover"
+                style={{
+                  transform: "scaleX(-1)",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  minHeight: "400px",
+                }}
+                onUserMedia={(stream) => {
+                  console.log("📸 Câmera iniciada com sucesso");
+                  setIsLoadingCamera(false);
+                  const track = stream.getVideoTracks()[0];
+                  const capabilities = track.getCapabilities();
+                  console.log("📷 Capacidades da câmera:", capabilities);
+                }}
+              />
+              <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+            </>
+          )}
+        </div>
+
+        {/* Feedback message */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+          <div
+            className={`
+               px-6 py-4 rounded-xl
+               text-white text-center text-lg font-medium
+               transition-colors duration-300
+               ${getMessageBackground()}
+             `}
+          >
+            {countdown && <span className="text-2xl mr-2">📸</span>}
+            {isFaceAligned && <span className="text-2xl mr-2">😊</span>}
+            {!isFaceAligned && !faceIsTooClose && !faceIsTooFar && <span className="text-2xl mr-2">👀</span>}
+            {getMessage()}
           </div>
         </div>
+      </div>
+      {countdown && (
+        <div
+          className={`mt-5 mx-auto max-w-[84px] w-full h-[84px] text-white font-bold flex items-center justify-center gap-2 rounded-full ${getMessageBackground()}`}
+        >
+          <FaCamera size={30} />
+          <span className="text-[50px]">{countdown}</span>
+        </div>
       )}
-    </div>
+
+      {showConfirmModal && tempPhoto && (
+        <ConfirmPhotoModal photo={tempPhoto} onConfirm={handleConfirmPhoto} onRetry={handleRetryPhoto} />
+      )}
+    </>
   );
 }
+
+export default Home;
