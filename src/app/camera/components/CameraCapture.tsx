@@ -12,7 +12,7 @@ export default function CameraCapture() {
   const [zoom, setZoom] = useState(1);
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
-    video: { width: 1080, height: 1920, facingMode: "environment" },
+    video: { width: 1920, height: 1080, facingMode: "environment" },
     audio: false,
   };
 
@@ -143,12 +143,12 @@ export default function CameraCapture() {
                   muted
                   className="w-full h-full bg-black rounded-md object-contain"
                 />
-                {/* Overlay com área de corte 1080x1627 */}
+                {/* Overlay com área de corte 1627x1080 */}
                 <div 
                   className="absolute pointer-events-none"
                   style={{
-                    width: '100%',
-                    height: '84.74%',
+                    width: '84.74%', // 1627/1920 = 0.8474
+                    height: '100%',
                     border: '2px dashed rgba(255, 255, 255, 0.8)',
                     boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.3)',
                   }}
