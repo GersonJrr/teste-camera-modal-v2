@@ -145,21 +145,22 @@ export default function CameraCapture() {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full bg-black rounded-md"
+                  className="w-full h-full bg-black rounded-md object-cover"
                 />
 
                 {/* Overlay pontilhado central */}
                 <div
-                  className="absolute border-2 border-dashed border-white"
-                  style={{
-                    width: "386px",
-                    height: "583px",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    pointerEvents: "none", // para não atrapalhar clique nos botões
-                  }}
-                />
+  className="absolute border-2 border-dashed border-white"
+  style={{
+    width: "60%",        // 60% da largura do vídeo
+    aspectRatio: "386/583", // mantém a proporção do quadro
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  }}
+/>
+
               </div>
 
 
