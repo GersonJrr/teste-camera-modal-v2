@@ -12,7 +12,7 @@ export default function CameraCapture() {
   const [zoom, setZoom] = useState(1);
 
   const HIGH_RES_CONSTRAINTS: MediaStreamConstraints = {
-    video: { width: 1920, height: 1080, facingMode: "environment" },
+    video: { width: 1627, height: 1080, facingMode: "environment" },
     audio: false,
   };
 
@@ -24,7 +24,7 @@ export default function CameraCapture() {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(console.error);
       }
-      applyZoom(zoom);
+      applyZoom(zoom); // aplica zoom inicial
     } catch (err) {
       console.error("Não foi possível acessar a câmera:", err);
       alert("Não foi possível acessar a câmera. Verifique as permissões.");
@@ -42,6 +42,7 @@ export default function CameraCapture() {
       const { min = 1, max = 5 } = capabilities.zoom as { min?: number; max?: number };
       const clampedZoom = Math.max(min, Math.min(max, zoomLevel));
 
+      // cast seguro para evitar erro de tipo
       track.applyConstraints({
         advanced: [{ zoom: clampedZoom } as unknown as MediaTrackConstraintSet],
       }).catch(console.error);
@@ -49,6 +50,7 @@ export default function CameraCapture() {
       setZoom(clampedZoom);
     }
   };
+
 
   const handleZoomIn = () => applyZoom(zoom + 0.5);
   const handleZoomOut = () => applyZoom(zoom - 0.5);
@@ -129,31 +131,39 @@ export default function CameraCapture() {
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
           onClick={closeCamera}
         >
+          
           <div
             className="w-[100%] md:w-[80vw] h-[95vh] md:h-[90vh] rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
-              {/* Container do vídeo com overlay */}
-              <div className="relative w-full max-h-[70vh] flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full bg-black rounded-md object-contain"
-                />
-                {/* Overlay com área de corte 1627x1080 */}
-                <div 
-                  className="absolute pointer-events-none"
-                  style={{
-                    width: '84.74%', // 1627/1920 = 0.8474
-                    height: '100%',
-                    border: '2px dashed rgba(255, 255, 255, 0.8)',
-                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.3)',
-                  }}
-                />
-              </div>
+              {/* Dentro do container do vídeo */}
+            <div className="relative w-full max-h-[70vh]">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full bg-black rounded-md object-cover"
+              />
+
+              {/* Overlay pontilhado central */}
+              <div
+                className="absolute border-2 border-dashed border-white"
+                style={{
+                  // largura proporcional ao vídeo (ajuste conforme necessário)
+                  width: "40%",                    // ocupa 40% da largura do vídeo
+                  aspectRatio: "1080/1627",        // mantém a proporção exata do quadro
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+
+
 
               {/* Controles de Zoom */}
               <div className="flex gap-2 items-center justify-center mt-2">
