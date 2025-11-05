@@ -162,6 +162,16 @@ export default function CameraCapture() {
                   muted
                   className="w-full h-full bg-black rounded-md object-cover"
                 />
+                <img
+                  src="https://imgproductioncrm.s3.us-east-2.amazonaws.com/2008guia.png1762373792.3064"
+                  alt="Guia de orientação"
+                  className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain"
+                  }}
+                />
                 <div
                   className="absolute border-2 border-dashed border-white"
                   style={{
