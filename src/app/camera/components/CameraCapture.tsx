@@ -167,9 +167,13 @@ export default function CameraCapture() {
                   alt="Guia de orientação"
                   className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
                   style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain"
+                    aspectRatio: "1080/1920",
+                    height: "100%",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "none",
+                     objectFit: "contain"
                   }}
                 />
                 <div
