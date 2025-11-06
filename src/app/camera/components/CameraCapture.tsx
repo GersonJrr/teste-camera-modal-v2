@@ -155,7 +155,7 @@ export default function CameraCapture() {
           >
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
              <div className="relative w-full max-h-[70vh]">
-              <video
+               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
@@ -163,17 +163,13 @@ export default function CameraCapture() {
                 className="w-full h-full bg-black rounded-md object-cover"
               />
 
-              {/* Imagem guia sobreposta */}
+              {/* Imagem guia sobreposta - Full 1920x1080 */}
               <img
                 src="https://imgproductioncrm.s3.us-east-2.amazonaws.com/2008guia.png1762373792.3064"
                 alt="Guia de enquadramento"
-                className="absolute top-1/2 left-1/2 max-h-full max-w-full pointer-events-none"
+                className="absolute top-0 left-0 w-full h-full pointer-events-none"
                 style={{
-                  transform: "translate(-50%, -50%) scale(1.2)",
-                  aspectRatio: "1920/1080",
-                  height: "100%",
-                  objectFit: "contain",
-                  
+                  objectFit: "cover",
                 }}
               />
 
