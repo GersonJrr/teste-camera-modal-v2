@@ -154,40 +154,43 @@ export default function CameraCapture() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-1 h-full flex flex-col items-center justify-center gap-4">
-              <div className="relative w-full max-h-[70vh]">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full bg-black rounded-md object-cover"
-                />
-                <img
-                  src="https://imgproductioncrm.s3.us-east-2.amazonaws.com/2008guia.png1762373792.3064"
-                  alt="Guia de orientação"
-                  className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{
-                    aspectRatio: "1080/1920",
-                    height: "100%",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    pointerEvents: "none",
-                     objectFit: "contain"
-                  }}
-                />
-                <div
-                  className="absolute border-2 border-dashed border-white"
-                  style={{
-                    aspectRatio: "386/584",
-                    height: "100%",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
+             <div className="relative w-full max-h-[70vh]">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full bg-black rounded-md object-cover"
+              />
+
+              {/* Imagem guia sobreposta */}
+              <img
+                src="https://imgproductioncrm.s3.us-east-2.amazonaws.com/2008guia.png1762373792.3064"
+                alt="Guia de enquadramento"
+                className="absolute top-1/2 left-1/2 max-h-full max-w-full pointer-events-none"
+                style={{
+                  transform: "translate(-50%, -50%) scale(1.2)",
+                  aspectRatio: "1920/1080",
+                  height: "100%",
+                  objectFit: "contain",
+                  
+                }}
+              />
+
+              {/* (Opcional) Mantém a borda de referência */}
+              <div
+                className="absolute border-2 border-dashed border-white"
+                style={{
+                  aspectRatio: "386/584",
+                  height: "100%",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  pointerEvents: "none",
+                }}
+              />
+          </div>
+
 
               {/* Controles de Zoom */}
               <div className="flex gap-2 items-center justify-center mt-2">
