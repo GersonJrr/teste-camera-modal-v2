@@ -13,8 +13,10 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
   useEffect(() => {
     const fetchVideo = async () => {
       if (!idProduto) return;
+
       setLoading(true);
       setError(null);
+      setVideoUrl(null); // reseta video anterior
 
       try {
         const response = await axios.get(
@@ -22,12 +24,13 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
           { params: { id_produto: idProduto } }
         );
 
-        // CORREÇÃO: usar response.data.link_video
         if (response.data && response.data.link_video) {
           setVideoUrl(response.data.link_video);
         } else {
+          setVideoUrl(null); // garante reset
           setError("Nenhum vídeo encontrado para este produto.");
         }
+
       } catch (err) {
         console.error(err);
         setError("Erro ao buscar o vídeo.");
@@ -42,7 +45,13 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
   return (
     <div>
       {loading && <p>Carregando vídeo...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {!loading && error && <p style={{ color: "red" }}>{error}</p>}
+
+      {!loading && !videoUrl && !error && (
+        <p>Nenhum vídeo disponível para este produto.</p>
+      )}
+
       {videoUrl && (
         <video
           src={videoUrl}
