@@ -6,7 +6,8 @@ interface VideoProdutoProps {
 }
 
 export function VideoProduto({ idProduto }: VideoProdutoProps) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoEditado, setVideoEditado] = useState<string | null>(null);
+  const [videoOriginal, setVideoOriginal] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +17,8 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
 
       setLoading(true);
       setError(null);
-      setVideoUrl(null); // reseta video anterior
+      setVideoEditado(null);
+      setVideoOriginal(null);
 
       try {
         const response = await axios.get(
@@ -24,10 +26,12 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
           { params: { id_produto: idProduto } }
         );
 
-        if (response.data && response.data.link_video) {
-          setVideoUrl(response.data.link_video);
+        const data = response.data;
+
+        if (data && (data.link_video || data.video_original)) {
+          setVideoEditado(data.link_video || null);
+          setVideoOriginal(data.video_original || null);
         } else {
-          setVideoUrl(null); // garante reset
           setError("Nenhum vídeo encontrado para este produto.");
         }
 
@@ -42,25 +46,28 @@ export function VideoProduto({ idProduto }: VideoProdutoProps) {
     fetchVideo();
   }, [idProduto]);
 
+  if (loading) return <p>Carregando vídeos...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (!videoEditado && !videoOriginal)
+    return <p>Nenhum vídeo disponível para este produto.</p>;
+
   return (
-    <div>
-      {loading && <p>Carregando vídeo...</p>}
-
-      {!loading && error && <p style={{ color: "red" }}>{error}</p>}
-
-      {!loading && !videoUrl && !error && (
-        <p>Nenhum vídeo disponível para este produto.</p>
+    <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
+      {videoOriginal && (
+        <div style={{ flex: 1, minWidth: "300px" }}>
+          <h4>Vídeo Original</h4>
+          <video src={videoOriginal} controls width="100%">
+            Seu navegador não suporta vídeo.
+          </video>
+        </div>
       )}
-
-      {videoUrl && (
-        <video
-          src={videoUrl}
-          controls
-          width="100%"
-          style={{ marginTop: "1rem" }}
-        >
-          Seu navegador não suporta vídeo.
-        </video>
+      {videoEditado && (
+        <div style={{ flex: 1, minWidth: "300px" }}>
+          <h4>Vídeo Editado</h4>
+          <video src={videoEditado} controls width="100%">
+            Seu navegador não suporta vídeo.
+          </video>
+        </div>
       )}
     </div>
   );
